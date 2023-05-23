@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>Red Pitaya Node</title>
+    <script src="client.js"></script>
+    <link rel="stylesheet" href="./style.css">
+
+    <script src="https://unpkg.com/mathjs@11.8.0/lib/browser/math.js"></script>
+</head>
+
+<body>
+    <div class="block_container" style="background-color: #00b5e2; margin-left:5%; margin-right:5%;">
+        <p> </p>
+        <p> </p>
+        <br>
+
+        <h1> RedPitaya Nth Edge Trigger App </h1>
+
+
+        <h2> CIIEC-BUAP</h2>
+
+        <p style="font-size: 30px; margin-left: 80%;">May, 17th, 2023 </p>
+        <p style="font-size: 20px; margin-left: 80%;"><a href="https://github.com/lvillasen/RedPitaya-Generate-Acquire-App/">Source Code</a> </p>
+
+        <hr>
+
+        <p style="color:black;font-size:30px;">
+    This app illustrates a way perform Nth edge trigger on a <a href="https://redpitaya.com/stemlab-125-14/">STEMlab 125-14 RedPitaya</a> board, shown in the picture below, using <a href="https://nodejs.org/en/about">Node.js </a> and  <a href="https://developer.mozilla.org/en-US/docs/Learn/Server-side/Express_Nodejs/Introduction">Express </a>. For mode details see <a href="https://github.com/lvillasen/RedPitaya-Node-Express-App"> here</a> and <a href="https://github.com/lvillasen/RedPitaya-Generate-Acquire-App"> here</a>.
+            <br><br>
+
+    <center><img src="./redpitaya.png" alt="Trulli" width="50%"></center>
+    <p style="color:black;font-size:30px;">This app requires a RedPitaya board connected to the network and prepared according to <a href="https://redpitaya.readthedocs.io/en/latest/quickStart/quickStart.html">these</a> and <a href="https://github.com/lvillasen/RedPitaya-Nth-Edge-Trigger-App">these instructions</a>. The Python scripts and the binary bitstream  used by this app to do Nth edge trigger are described in more detail <a href="https://github.com/lvillasen/RedPitaya-Hello-World"> here</a>.
+<br>
+<br>
+        <font color="#ffff00">CAUTION</font>: Do not use this app simultaneously with any other RedPitaya app. Be extremely 
+        cautious when using this app as it executes general-purpose bash commands and Python scripts. If 
+        you share this app with someone when the node.js scripts are running on the RedPitaya, it is 
+        equivalent to sharing the RedPitaya password with that person.
+        
+        </p>
+        <hr>
+      
+
+   <hr>
+
+   <h2>1. Connect to RedPitaya Board</h2>
+
+<p style="color:black;font-size:30px;">
+
+    <label style="color:black;font-size:30px;">Input the IP or <i>rp-xxxxxx.local</i> label of the Redpitaya board: </label>
+        <input type="text" id="ip" class = "input" style="font-size: 100%;" onchange="connect()" value="rp-f01e55.local" size=14 ;></input>
+        <input class="favorite styled" type="button"  value="Connect" onclick="connect()">
+        <div style="color:green;font-size:30px;" id="connect_display"><font color="red"></font></div>
+
+<br><br>
+
+   <h2>1. Upload an Arbitrary Signal to Memory</h2>
+
+<p style="color:black;font-size:30px;">
+
+        
+      This Python script uploads an arbitrary signal of 1024 points to RAM to be generated on DAC1 at a rate of 125 MHz.
+The arbitrary signal has an amplitude between -1 V and +1 V and a time extension of 1024*8 ns = 8192 ns.
+<br><br>
+
+Connect ADC1 to DAC1 if you want to capture the arbitrary signal with the fast ADC.
+<br><br>    
+        </p>
+
+ <div  id="block_container" style="text-align:center;margin: 3px solid;">
+            <p style="color:black;font-size:30px;"> Paste o Write Your Python Code Here</p>
+
+<textarea id="code_input_upload" style="width: 100%; white-space: pre; border:solid 5px #003b5c;"  rows="20" cols="120">
+#!/usr/bin/python
+###############################################################
+PERIOD = 1000 # ns
+###############################################################
+PERIOD = int(PERIOD/8)
+import numpy as np
+from periphery import MMIO
+from time import *
+
+dat = []
+####################################################################
+regset = MMIO(0x41230000, 0xc)
+regset.write32(0,0)   # Reset port A
+regset.write32(0,1)   # Reset port A
+
+for i in range(1024+2):
+    y = np.sin(2*np.pi*i/PERIOD)
+    if (i <100 or i > 900):
+        y=0
+    COUNTS = int(y * 2**14/(-2) + 2**13)
+
+    regset.write32(0,COUNTS*256*256+2)
+    regset.write32(0,COUNTS*256*256+1+2)
+    dat.append(y)
+regset.close()
+</textarea>
+        </div>
+
+        <input class="favorite styled" type="button" id="run_upload" value="Upload Signal" onclick="upload()">
+        <hr>
+
+   
+
+   
+        <hr>
+ 
+
+      <h2>2. Transfer the Acquisition Script for the Fast ADCs</h2>
+
+<p style="color:black;font-size:30px;">
+            The following Python script arms the trigger and acquires data with the fast ADCs of the RedPitaya.
+
+
+        </p>
+
+       <div  id="block_container" style="text-align:center;margin: 3px solid;">
+<p  style="color:black;font-size:30px;"> Paste o Write Your Python Code Here</p>
+
+<textarea id="code_input_save" style="width: 100%; white-space: pre; border:solid 5px #003b5c;"  rows="20" cols="120">
+#!/usr/bin/python
+import sys
+
+import time
+import numpy as np
+import random
+#import matplotlib.pyplot as plt
+job_number = sys.argv[1]
+
+
+##########################################################################inputs
+#Nth_THRESHOLD = 1 # Between 1 and 15
+Nth_THRESHOLD = int(sys.argv[2]) # Between 1 and 15
+CHANNEL = 1 # 1
+GAIN = 1 # +- 1 V
+#GAIN = 20 # +- 20 V, Select one according to your RP jumper LV or HV
+#TRESHOLD_VOLT = .2 # Volt
+TRESHOLD_VOLT = float(sys.argv[4])
+POINTS_PLOT_BEFORE_TRIGGER = 9000 # ns
+POINTS_SAVE_AFTER_TRIGGER = 9000 # ns
+#EDGE = 1 # 1 for PosEdge trigger  0 for NegEdge trigger
+EDGE = int(sys.argv[3])
+#MODE = "AUTO"
+MODE = "NORMAL"  # Select one
+##########################################################################
+POINTS_SAVE_AFTER_TRIGGER = int(POINTS_SAVE_AFTER_TRIGGER/8)
+POINTS_PLOT_BEFORE_TRIGGER = int(POINTS_PLOT_BEFORE_TRIGGER/8)
+#POINTS_BEFORE_TRIGGER = WINDOW_DOUBLE_PULSE
+DELAY = 3
+TRESHOLD_COUNTS = int(TRESHOLD_VOLT * 2**14/(-2*GAIN) + 2**13)
+#print ("TRESHOLD_COUNTS = ", TRESHOLD_COUNTS , "for TRESHOLD_VOLT =",TRESHOLD_VOLT, " Volt")
+#print("Waiting for trigger ....")
+print(job_number,",",POINTS_PLOT_BEFORE_TRIGGER,",",end="")
+from periphery import MMIO
+####################################################################
+regset = MMIO(0x41220000, 0xc)
+regset.write32(0,POINTS_SAVE_AFTER_TRIGGER*256*256) # POINTS_AFTER_TRIGGER and WINDOW_DOUBLE_PULSE
+regset.close()
+####################################################################
+regset = MMIO(0x41230000, 0xc)
+regset.write32(8,Nth_THRESHOLD*256*16  + EDGE) # TRIGGER EDGE and Nth_THRESHOLD
+regset.close()
+
+####################################################################
+regset = MMIO(0x41200000, 0xc)
+regset.write32(0,TRESHOLD_COUNTS*256*256) # TRESHOLD
+ADDR_TRIG_OLD = int(regset.read32(8)/256/256) - DELAY
+regset.write32(0,TRESHOLD_COUNTS*256*256+2) # TRESHOLD and ENABLE TRIGGER
+regset.write32(0,TRESHOLD_COUNTS*256*256)
+regset.close()
+#############################################################################
+regset = MMIO(0x41200000, 0xc)
+while(1):
+    time.sleep(.01) # to avoid saturating the RedPitaya CPUs
+    ADDR_TRIG_NEW =  int(regset.read32(8)/256/256) - DELAY
+    if MODE == "AUTO":
+        ADDR_TRIG_NEW = int (random.random()*2**12)
+        break
+
+    elif MODE == "NORMAL":
+        if ADDR_TRIG_NEW != ADDR_TRIG_OLD:   # TRIGGER DETECTED
+            break
+regset.close()
+####################################################################
+regset = MMIO(0x41200000, 0xc)
+print("Trigger received, pointer at trigger = ",ADDR_TRIG_NEW," =",hex(ADDR_TRIG_NEW))
+dat = []
+n = 0
+for ADDR_B in range(ADDR_TRIG_NEW-POINTS_PLOT_BEFORE_TRIGGER,ADDR_TRIG_NEW+ POINTS_SAVE_AFTER_TRIGGER,1):
+    n += 1
+    ADDR_B = ADDR_B%2**12
+    regset.write32(0,TRESHOLD_COUNTS*256*256+ADDR_B*16)
+    regset.write32(0,TRESHOLD_COUNTS*256*256+ADDR_B*16+1)
+    COUNTS = regset.read32(8)%(256*256)
+    DATA_VOLT = -2*GAIN*(COUNTS-2**13)/2**14
+    dat.append(DATA_VOLT)
+regset.close()
+####################################################################
+print(dat)
+</textarea>
+ 
+       
+ </div> 
+
+ <input  class="favorite styled" type="button" id="start_stop" value="Save DAQ Script" onclick="save_arm_trigger()">
+   <hr>
+     <h2>3. Start/Stop the Arbitrary Signal Generator </h2>
+
+
+
+<p style="color:black;font-size:30px;">
+
+            The following Python script starts the DAC to generate the arbitrary waveform defined previously.
+
+
+        </p>
+
+       <div  id="block_container" style="text-align:center;margin: 3px solid;">
+<p  style="color:black;font-size:30px;"> Paste o Write Your Python Code to Start the ASG Here.</p>
+
+<textarea id="code_input_start_DAC" style="width: 100%; white-space: pre; border:solid 5px #003b5c;"  rows="12" cols="120">
+#!/usr/bin/python 
+from periphery import MMIO
+import time
+period = 1 #s
+regset = MMIO(0x41230000, 0xc)
+while (1):
+    regset.write32(0,0)   # Reset port B
+    regset.write32(0,4)   # Reset port B
+    time.sleep(period)
+regset.close()
+</textarea>
+ 
+       
+ </div> 
+
+ <input  class="favorite styled" type="button"  value="Start ASG" onclick="start_DAC()">
+  <input  class="favorite styled" type="button"  value="Stop ASG" onclick="stop_DAC()">
+
+   <hr>
+ 
+   <h2>4. Start/Stop the Acquisition Script for the Fast ADCs</h2>
+
+
+
+<p style="color:black;font-size:30px;">
+   Connect ADC1 to DAC1 if you want to digitize the the arbitrary signal generated by the fast DAC.
+
+    <br><br>
+            Here we execute the acquisition code saved previously.
+
+<br><label>Nth Edge Trigger</label>
+            <input class = "input" id="Nth_edge" style="font-size: 100%;"  value="1" size=2 ;></input>
+            <label>Slope Pos 1/Neg 0</label>
+            <input  class = "input" id="edge" style="font-size: 100%;"  value="1" size=1 ;></input>
+            <label>Threshold</label>
+            <input  class = "input" id="threshold" style="font-size: 100%;"  value=".5" size=4 ;></input>
+            <br>
+                  <input class="favorite styled" type="button" id="single" value="SINGLE" onclick="single()">
+
+                <label>Trigger Mode:</label>
+
+                <input class="favorite styled" type="button" id="arm_trigger" value="OFF" onclick="trigger()">
+ </p>
+   <hr>
+<div  id="block_container">        
+<div id="plot1" style= "border:solid 5px #003b5c"></div>
+    </div> 
+    <div style="color:black;font-size:30px;" id="data_display_plot"></div>
+
+
+        <hr>
+  <h2>5. Other Options Using C</h2>
+
+<p style="color:black;font-size:30px;">
+            Other possibilities are to use the C language with the C-Pheryphery code for mode details see <a href="https://github.com/lvillasen/RedPitaya-C-Periphery"> here</a>.
+
+<br><br>
+These options require some modifications to the JavaScript code given here.
+
+ </p>
+
+  
+<br><br>
+</body>
