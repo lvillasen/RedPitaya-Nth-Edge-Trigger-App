@@ -34,7 +34,6 @@ On a Red Pitaya terminal cd to that folder and type:
 
 
     cat 4.DAC-ADC.bit > /dev/xdevcfg
-
     chmod a+x start.sh
     ./start.sh
 
