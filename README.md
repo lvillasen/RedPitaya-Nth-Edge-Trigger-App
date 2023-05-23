@@ -1,4 +1,4 @@
-# RedPitaya Generate Acquire App
+# RedPitaya Nth Edge Trigger App
 This app illustrates a way to perform Nth edge trigger on a STEMlab 125-14 RedPitaya board using Node.js, Express and Python scripts.
 
 ## Requisites
