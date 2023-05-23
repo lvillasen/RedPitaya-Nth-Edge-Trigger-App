@@ -1,7 +1,5 @@
 # RedPitaya Generate Acquire App
-Web app to control the Red Pitaya board using Node.js which is a back-end JavaScript runtime environment to 
-generate arbitrary signals with the fast DACs and acquire signals with the fast ADCs.
-
+This app illustrates a way to perform Nth edge trigger on a STEMlab 125-14 RedPitaya board using Node.js, Express and Python scripts.
 
 ## Requisites
 
