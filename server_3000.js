@@ -2,9 +2,7 @@ const express = require('express');
 const execSync = require('child_process').execSync;
 const app = express();
 const cors = require('cors');
-//const axios = require('axios');
 app.use(cors({ origin: "*", }))
-//app.use(express.json());
 app.disable('etag');
 app.disable('x-powered-by');
 
