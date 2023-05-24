@@ -17,7 +17,7 @@ app.get('/arm_trig/:event/:Nth_edge/:edge/:threshold',   function (req, res) {
  app.get('/stop_DAC', function (req, res) {
     console.log('STOP DAC received by server')
     res.type('text/plain');
-    res.send("stop_DAC received by server");
+    res.send("STOP_DAC received by server");
     const output4 = execSync('killall python3' , { encoding: 'utf-8' });
 });
 
