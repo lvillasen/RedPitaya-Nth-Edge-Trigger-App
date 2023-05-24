@@ -68,9 +68,8 @@ function arm_trigger() {
 
             //resp_array = resp.slice(",");
             document.getElementById("data_display_plot").innerHTML = " Number of Points: "+parseInt(myArray.length-3);
-            console.log(myArray);
-            console.log(myArray.length);
-            //console.log(parseFloat(myArray[2].split("[")[1]));
+            //console.log(myArray);
+            //console.log(myArray.length);
             x_at_trigger = parseInt(myArray[1]);
             console.log("x_at_trigger = " + x_at_trigger)
 
