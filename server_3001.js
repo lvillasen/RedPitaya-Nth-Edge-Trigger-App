@@ -8,14 +8,14 @@ app.disable('x-powered-by');
 
 app.get('/arm_trig/:event/:Nth_edge/:edge/:threshold',   function (req, res) {
 
-    console.log('8.ARM_TRIGGER received by server')
+    console.log('ARM_TRIGGER received by server')
     const output = execSync('python3 Arm_Trigger.py ' + req.params.event + " " +req.params.Nth_edge + " " +req.params.edge + " " +req.params.threshold, { encoding: 'utf-8' });
       res.type('text/plain');
       res.send(output);
   });
 
  app.get('/stop_DAC', function (req, res) {
-    console.log('7.STOP DAC received by server')
+    console.log('STOP DAC received by server')
     res.type('text/plain');
     res.send("stop_DAC received by server");
     const output4 = execSync('killall python3' , { encoding: 'utf-8' });
